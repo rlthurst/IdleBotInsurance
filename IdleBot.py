@@ -6,27 +6,28 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 import time
 import tkinter as tk
-from threading import Thread
+import os, sys
 
-browser = ""
+browser = None
 
 def login(user, passw, check_browser):
     global browser
 
+    def resource_path(relative_path):
+        try:
+            base_path = sys._MEIPASS
+        except Exception:
+            base_path = os.path.dirname(__file__)
+        return os.path.join(base_path, relative_path)
+
+    chrome_driver = resource_path('./driver/chromedriver.exe')
     if check_browser == 1:
-        browser = webdriver.Chrome('driver/chromedriver')
+        browser = webdriver.Chrome(chrome_driver)
     elif check_browser == 0:
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--window-size=1920x1080")
-        chrome_driver = "driver/chromedriver"
         browser = webdriver.Chrome(options=chrome_options, executable_path=chrome_driver)
-    else:
-        print('Browser is not supported :('
-        '''
-        TODO
-        write an exception if browser is not chrome or phantom 
-        ''')
 
     # Login
     browser.get('https://wfg.xcelsolutions.com')
@@ -67,12 +68,12 @@ def login(user, passw, check_browser):
 
     get_hours()
 
-
+# Navigates bot to course page, begin idle
 def get_hours():
     global after_id
     global after_id2
 
-    print('Farm start')
+    # print('Farm start')
     complete_course = WebDriverWait(browser, 10).until\
         (EC.element_to_be_clickable((By.XPATH, '//*[@id="root"]/div/div[3]/div/div[2]/div/div[4]/div[1]/div[2]/div/div[3]/div[2]/div[2]/div/div[1]/div/div[2]/div/button')))
     complete_course.click()
@@ -90,16 +91,17 @@ def get_hours():
     after_id2 = window.after(605000, get_hours)
 
 
+# Save and exit from course
 def save():
     global browser
 
     save_button = WebDriverWait(browser, 10).until \
         (EC.element_to_be_clickable((By.XPATH, '//*[@id="exitButton"]')))
     save_button.click()
-    print('Farmed 10 minutes')
+    # print('Farmed 10 minutes')
 
 
-# Render GUI
+# Start/Stop web bot after button event
 def run():
     global browser
     global btn
@@ -114,6 +116,8 @@ def run():
     global after_id
     global after_id2
 
+    after_id = None
+    after_id2 = None
     user1 = user.get()
     passw1 = passw.get()
     check_browser1 = check_browser.get()
@@ -124,6 +128,9 @@ def run():
         ent_pass.configure(state='disabled')
         C2.configure(state='disabled')
 
+        # Run bot, if login error exit, if arbitrary error reset and rerun bot
+        # If bot is not working, GUI will stay unresponsive
+        # If wrong login, bot quits and prompts user to try to run again
         try:
             login(user1, passw1, check_browser1)
         except NameError:
@@ -134,9 +141,11 @@ def run():
             C2.configure(state='normal')
         except Exception as e:
             browser.quit()
-            window.after_cancel(after_id)
-            window.after_cancel(after_id2)
-            login(user1, passw1, check_browser1)
+            if after_id is not None:
+                window.after_cancel(after_id)
+                window.after_cancel(after_id2)
+            btn.set('Run')
+            run()
 
     elif btn.get() == 'Stop':
         btn.set('Run')
@@ -151,8 +160,9 @@ def run():
             window.after_cancel(after_id2)
         except:
             browser.quit()
-            window.after_cancel(after_id)
-            window.after_cancel(after_id2)
+            if after_id is not None:
+                window.after_cancel(after_id)
+                window.after_cancel(after_id2)
 
 # Create a new window
 window = tk.Tk()
@@ -161,15 +171,16 @@ window.resizable(False, False)
 
 # Create a new frame for data entries and checkboxes
 frm = tk.Frame(relief=tk.SUNKEN, borderwidth=3)
-# Pack the frame into the window
 frm.pack()
 
+# Username
 user = tk.StringVar()
 lbl_user = tk.Label(master=frm, text="Username:")
 ent_user = tk.Entry(master=frm, width=50, textvariable=user)
 lbl_user.grid(row=0, column=0, sticky="e")
 ent_user.grid(row=0, column=1)
 
+# Password
 passw = tk.StringVar()
 lbl_pass = tk.Label(master=frm, text="Password:")
 ent_pass = tk.Entry(master=frm, width=50, textvariable=passw, show="*")
@@ -183,6 +194,7 @@ def showPass():
     elif check_pass.get() == 0:
         ent_pass.configure(show="*")
 
+# Checkboxes
 check_pass = tk.IntVar()
 check_browser = tk.IntVar()
 C1 = tk.Checkbutton(frm, text="Show password", variable=check_pass, onvalue=1, offvalue=0, command=showPass)
