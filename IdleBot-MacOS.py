@@ -6,21 +6,23 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 import time
 import tkinter as tk
-import os, sys
+import os, sys, inspect
 
 browser = None
 
 def login(user, passw, check_browser):
     global browser
 
-    def resource_path(relative_path):
-        try:
-            base_path = sys._MEIPASS
-        except Exception:
-            base_path = os.path.dirname(__file__)
-        return os.path.join(base_path, relative_path)
+    #def resource_path(relative_path):
+    #    try:
+    #        base_path = sys._MEIPASS
+    #    except Exception:
+    #        base_path = os.path.dirname(__file__)
+    #    return os.path.join(base_path, relative_path)
 
-    chrome_driver = resource_path('./driver/chromedriver.exe')
+    current_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
+    chrome_driver = os.path.join(current_folder, "chromedriver")
+
     if check_browser == 1:
         browser = webdriver.Chrome(chrome_driver)
     elif check_browser == 0:
